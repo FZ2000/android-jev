@@ -1,0 +1,21 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Stage screenshots and decision logs from the scenario runs
+artifacts/
+
+# Coverage data, regenerated on every run
+.coverage
+htmlcov/
+coverage.xml
+
+# Build output
+dist/
+build/
+*.egg-info/
+
+# macOS
+.DS_Store

@@ -1,0 +1,313 @@
+name: CI
+
+# What this runs, what it cannot run, and why.
+#
+# This runs on a runner that has no phone attached and cannot have one. That is
+# not an oversight and it is not fixable by adding an emulator, for two reasons.
+# The runner is a container, so it has no hardware acceleration to boot an Android
+# image with; and the tests are written against a particular phone with Google's
+# applications on it — Chrome, YouTube, Photos, the Play Store — so an emulator
+# without those would fail scenarios for the absence of an app rather than for a
+# defect in this code. A permanently red job that means nothing is worse than no
+# job at all. The device suite runs on the machine that has the phone.
+#
+# What is left, and what this does run: everything that does not need hardware.
+# That includes the world of simulated screens, which runs the real loop against a
+# fake phone in seconds, and the recorded device output under `tests/recorded/`,
+# which is real adb output replayed with no phone anywhere — the way a change to
+# the screen parser is caught here rather than on someone's desk.
+#
+# The rule this workflow is built around: a machine that has never been set up
+# must pass. The suite once passed on the author's machine for weeks while this
+# runner was red, because that machine has adb and a key and this one has neither.
+# `scripts/check.sh --as-ci` reproduces these conditions locally — no adb, no key,
+# no home directory — and is the command a reader should run before pushing.
+# `scripts/check.sh` alone is the fuller gate, and needs the phone.
+#
+# Coverage is deliberately not measured here. Most of this package only executes
+# with a phone attached, so a fast-suite-only measurement reports 81% and would
+# fail a gate on code this runner had no way to reach. The 95% gate lives in
+# `scripts/check.sh` and in `pyproject.toml`, and is read from both suites together
+# on the machine that has a phone.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Pinned by commit rather than by tag: a tag can be moved, and what runs in
+      # this repository's CI should not be able to change without a commit here.
+      # The version is in the comment so a reader knows what they are looking at.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          # Nothing in this workflow pushes, so the job does not need a token
+          # sitting in the checkout for the length of the run.
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5.4.2
+        with:
+          enable-cache: true
+
+      - run: uv sync --extra dev
+
+      - name: The code is linted
+        # The version is fixed by uv.lock, so a rule that appears in a new ruff
+        # cannot turn this red on its own. That has happened: a formatter upgrade
+        # once reformatted a codebase mid-review.
+        run: uv run ruff check --output-format=github .
+
+      - name: The code is formatted
+        run: uv run ruff format --check .
+
+      - name: Every test can fail
+        # A test that cannot fail is worse than no test: it is counted. This reads
+        # the suite as syntax and reports the four shapes that check nothing - no
+        # assertion, an assertion about a constant, `is not None` on its own, and a
+        # skip with no reason. It found one when it was written, in a test named for
+        # case-insensitive matching that only asserted something had matched.
+        run: uv run python scripts/audit_the_tests.py
+
+      - name: The repository can be found
+        # Reads this repository's own description and topics back from the GitHub
+        # API and compares them with the intent in
+        # `.github/repository-metadata.toml`. Those three fields are what GitHub
+        # search matches - it does not read the README - and they live on GitHub
+        # rather than in the checkout, which is exactly the sort of claim that goes
+        # stale with nobody noticing.
+        #
+        # The offline half of the same rules runs as a test in the suite, so a
+        # change to the file is caught locally too. This step is the half that
+        # needs a token, and it fails rather than shrugging if it cannot ask.
+        #
+        # Not on a pull request from a fork, and that guard is the whole reason
+        # this step can exist. `GITHUB_REPOSITORY` in a fork's run is the *fork*,
+        # which has no description and no topics because its owner never set any,
+        # so the comparison would fail for a contributor who changed nothing but a
+        # line of prose. The offline half still runs there, as a test, which is the
+        # part that is about their change.
+        if: >-
+          github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run python scripts/check_findability.py --live
+
+  tests:
+    name: Tests on Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      # One failing version should not hide what the other one says.
+      fail-fast: false
+      matrix:
+        # Every version `requires-python` claims to support, because a claim like
+        # that is only true if something checks it.
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5.4.2
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --extra dev --python ${{ matrix.python }}
+
+      - name: No test may be marked as an expected failure
+        # Its own step, and first, because it is the rule that keeps the rest
+        # meaningful: a test allowed to fail reports green while the behaviour it
+        # describes does not work. The suite below runs it again as part of the
+        # run; naming it here is so a reader learns the rule is broken before
+        # reading a screenful of unrelated failures.
+        run: uv run pytest tests/test_no_xfail.py -q
+
+      - name: The fast suite, on a machine that has never been set up
+        # The same command a reader runs locally, rather than a second spelling of
+        # it. The script hides adb and the key so that this runner's conditions are
+        # reproduced on a developer's machine instead of only discovered here.
+        run: scripts/check.sh --as-ci
+
+      - name: Nothing has drifted from the code
+        # The skill adapters and the tool reference are generated. A generated file
+        # that no longer matches its source is documentation that lies.
+        #
+        # It runs even when the suite above failed: the two are independent, this
+        # is seconds, and a red run that reports everything wrong with it is one
+        # round trip rather than two.
+        if: always()
+        run: |
+          uv run python scripts/render_skill_for_agents.py
+          git diff --exit-code
+
+  secrets:
+    name: No credential in any commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          # The scan needs the history, which is why this is not a shallow clone:
+          # "was a credential ever committed here" cannot be answered from one
+          # commit, and a secret in an old commit is a secret that is still in the
+          # repository after the file is cleaned up.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Scan every commit and the tracked tree
+        # The same script a contributor runs, at the same pinned scanner version:
+        # this machine's gitleaks is whatever brew installed, and a scan whose rules
+        # differ between here and there is a scan whose answer means nothing.
+        #
+        # Its first version used gitleaks' defaults with no config and passed a
+        # staged key-shaped secret. `.gitleaks.toml` extends those defaults with the
+        # two shapes this project's own credentials take, and the rules were each
+        # watched failing before this job was trusted.
+        run: scripts/check_for_secrets.sh
+
+  emulator:
+    name: The device suite, on an Android emulator
+    runs-on: ubuntu-latest
+    # Generous: the boot is most of it, and a job killed at the wrong moment leaves
+    # an emulator nobody can explain. The suite itself is about seven minutes.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5.4.2
+        with:
+          enable-cache: true
+
+      - name: Let the emulator reach /dev/kvm
+        # GitHub's Linux runners have KVM; the runner user cannot read it until this
+        # runs. Without it the emulator falls back to interpreting ARM instructions
+        # and the job times out rather than failing, which is the worst way to find
+        # out. This is the step the action's own documentation gives.
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install
+        run: uv sync --extra dev
+
+      - name: Run the device suite against an emulator
+        # The selection was measured, not guessed. On a real Android 14 emulator,
+        # 54 of the 65 device tests pass as they are; six of the rest assert
+        # something true of the attached phone - its screen size, its model, or a
+        # goal needing an app the image does not carry - and say so with a marker.
+        # The remaining failures were a device without the app the goal named, and
+        # those now stand themselves aside inside the test.
+        #
+        # The scenario catalogue is excluded: it is the specification, written
+        # against a phone with Google's applications, it takes half an hour, and
+        # `scripts/run_scenarios.py` is the better way to work through it.
+        #
+        # Tests needing a Jev key stand aside here, because CI has no key and must
+        # not: a pull request from a fork would then be running with somebody's
+        # credential. What runs is the adb layer, the screen reader, the tool
+        # contract, and the scenarios that need no decision model.
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d  # v2.38.0
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          # One line on purpose. The action passes this to a shell that does not
+          # honour a trailing backslash, so a continuation arrived at pytest as the
+          # argument `\` and it exited 4 with "file or directory not found",
+          # having collected nothing. A green-looking job that ran no tests is the
+          # failure this project keeps finding, and this one announced itself only
+          # because pytest refuses to exit 0 with nothing collected.
+          script: |
+            .venv/bin/pytest -m "device and not needs_the_real_phone" --ignore=tests/test_scenarios_on_the_phone.py -q
+
+  package:
+    name: The built package works outside this checkout
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5.4.2
+        with:
+          enable-cache: true
+
+      - name: Build the wheel
+        run: uv build --wheel
+
+      - name: Install it somewhere that is not the source tree
+        # Every other job runs from the checkout, where `import phone_control`
+        # always resolves because `pythonpath = ["src"]` says so. That masks a
+        # packaging fault completely: a wheel that omits a module, or a marker
+        # file that never got included, passes everything above and fails for the
+        # first person who installs it.
+        run: |
+          uv venv /tmp/installed --python 3.12
+          uv pip install --python /tmp/installed/bin/python dist/*.whl
+
+      - name: Import every module from the installed package
+        run: |
+          cd /tmp
+          /tmp/installed/bin/python - <<'EOF'
+          import importlib, pkgutil, pathlib
+          import phone_control
+
+          failures = []
+          for found in pkgutil.iter_modules(phone_control.__path__):
+              try:
+                  importlib.import_module(f"phone_control.{found.name}")
+              except Exception as error:
+                  failures.append(f"{found.name}: {error}")
+          assert not failures, "modules that will not import when installed:\n" + "\n".join(failures)
+
+          # The typing claim is a classifier plus a marker file. A classifier
+          # without the marker is a promise the package does not keep, and the
+          # only place that matters is inside the wheel.
+          marker = pathlib.Path(phone_control.__file__).parent / "py.typed"
+          assert marker.is_file(), "py.typed is missing from the installed package"
+          print(f"imported every module; py.typed is present at {marker}")
+          EOF
+
+  ci-gate:
+    name: ci-gate
+    # One required check rather than five. A matrix reports as "Tests on Python
+    # 3.11" and "Tests on Python 3.12", so requiring those by name means editing
+    # branch protection every time the matrix changes - and a conditional job that
+    # never reports blocks a merge forever.
+    #
+    # `always()` is load-bearing: without it this skips when a job it needs fails,
+    # and a skipped required check reports nothing at all.
+    if: always()
+    needs: [lint, secrets, tests, emulator, package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if anything failed or was cancelled
+        # `skipped` is tolerated, because a job gated on a condition skips by
+        # design. `cancelled` is not: a run that timed out must not merge.
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo '${{ toJSON(needs) }}'
+          exit 1
+
+      - run: echo "every job passed"

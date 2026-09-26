@@ -1,0 +1,76 @@
+# How this repository is meant to be found.
+#
+# GitHub's search matches the repository **name, description and topics** — not the
+# README. A two-word query returns one result by default and 782 with `in:readme`,
+# which is the measurement that says these three fields do the work.
+#
+# This file is the intent. `scripts/check_findability.py` checks that the file
+# follows the rules, and — with a token — that GitHub actually carries what the
+# file says. Anything edited here without being applied to the repository is a red
+# build rather than a quiet difference.
+#
+# TOML rather than YAML so that reading it needs no dependency: `tomllib` is in the
+# standard library from 3.11, which is the version this project already requires.
+#
+# Every number is a measurement with the query that produced it, because a topic
+# chosen because it sounded good is how a repository ends up tagged with something
+# nobody searches for. Measured 2026-09-26 with `topic:<name>` result counts.
+
+# Which repository this describes. Declared rather than read from the git remote,
+# because the development checkout has a different remote and a different directory
+# name, and a check that fails because of where somebody cloned it is a bad check.
+repository = "FZ2000/android-phone-control"
+
+description = "MCP server and skill that let an agent drive an Android phone naturally over adb"
+
+# The first ~36 characters are what survives in a search-result title, so the head
+# of the description is chosen rather than incidental.
+head = "MCP server"
+
+# Terms a searcher for this would type, and that the description therefore has to
+# contain. Read off the twenty most relevant repositories for the queries below
+# rather than guessed: `android mcp` returns 1,391 repositories led by projects
+# with 7k-15k stars, while `mcp android phone` returns 126 — which is the phrase
+# this description is built to match.
+must_contain = ["MCP server", "Android", "phone", "adb", "agent"]
+
+# Every topic below, with the audience it reaches. A topic with no audience is a
+# decoration; the ones in `dropped` were removed for exactly that.
+topics = [
+    "android", "adb", "mcp", "mcp-server", "model-context-protocol",
+    "computer-use", "android-automation", "automation", "ai-agents", "agents",
+    "llm", "tool-use", "python", "jev", "typesafe", "phone", "claude",
+    "mobile", "skill", "remote-control",
+]
+
+[topic_audience]
+android = 155705
+automation = 101353
+ai-agents = 99444
+llm = 139851
+python = 902467
+mcp = 81872
+mcp-server = 30637
+model-context-protocol = 31035
+claude = 53421
+agents = 17906
+mobile = 16301
+skill = 7190
+remote-control = 3661
+adb = 2652
+jev = 1858
+tool-use = 1421
+phone = 1394
+typesafe = 1312
+computer-use = 1255
+android-automation = 629
+
+# Dropped, with the audience that lost them their place: `accessibility-service`
+# (358), `uiautomator` (113) and `system-one` (355) are all accurate and all too
+# small to be worth a slot against `mobile` (16,301), `skill` (7,190) and
+# `remote-control` (3,661). `phone-mcp` (4), `android-phone` (47) and
+# `phone-control` (14) were considered and are effectively empty.
+[topic_audience_dropped]
+accessibility-service = 358
+uiautomator = 113
+system-one = 355

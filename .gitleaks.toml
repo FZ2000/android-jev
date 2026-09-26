@@ -1,0 +1,39 @@
+# The rules the secret scan uses: gitleaks' defaults, plus the two shapes this
+# project's own credentials take.
+#
+# Why this file exists. The scan first ran with no config at all, on the assumption
+# that the default rules were enough. A negative control — a key-shaped string staged
+# and not committed — came back "no leaks found", which is the answer that would have
+# made the CI job worthless: the defaults know AWS, Stripe and GitHub token formats,
+# and nothing about `apikey_…` or `sk-or-v1-…`, which are the only credentials this
+# project ever handles.
+#
+# `useDefault = true` keeps every built-in rule and adds these two. That is the
+# opposite of an allowlist: nothing here suppresses a finding, and running the scan
+# with the defaults alone would find strictly less.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "typesafe-api-key"
+description = "A TypeSafe API key, which is what Jev is reached with"
+# Measured against the real thing: `apikey_` followed by a long mixed-case string.
+# The floor of 20 is above the fixtures in tests/test_jev_decisions.py, which use
+# `apikey_something` on purpose; a fake short enough to be obviously fake should not
+# have to be suppressed.
+regex = '''apikey_[A-Za-z0-9]{20,}'''
+keywords = ["apikey_"]
+
+[[rules]]
+id = "openrouter-api-key"
+description = "An OpenRouter API key, which is the other gateway Jev is served by"
+regex = '''sk-or-v1-[A-Za-z0-9]{32,}'''
+keywords = ["sk-or-v1-"]
+
+[[rules]]
+id = "phone-control-secret-file"
+description = "The file the README tells a user to write their key into"
+# The key is meant to live outside the repository, in the harness's secrets
+# directory. One inside the checkout is there by mistake whatever it contains.
+path = '''(^|/)openrouter-api-key$|(^|/)jev-api-key$'''
