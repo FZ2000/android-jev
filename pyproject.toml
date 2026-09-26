@@ -1,0 +1,135 @@
+[project]
+name = "android-phone-control"
+version = "0.1.0"
+description = "Control your Android phone through Jev: an MCP server that reads the screen, decides each step, and reports honestly"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+keywords = [
+    "android",
+    "adb",
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "computer-use",
+    "ai-agents",
+    "automation",
+    "phone",
+    "uiautomator",
+    "jev",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: System :: Hardware",
+    "Typing :: Typed",
+]
+dependencies = [
+    "mcp>=2.0",
+    "httpx>=0.27",
+    "pillow>=11.0",
+    # Reading a screen from a picture is the route for a page the accessibility
+    # tree will not describe, and on macOS it is the only route there is. It was
+    # undeclared for a hundred commits: the feature worked on the machine it was
+    # written on because the package happened to be installed there, and a fresh
+    # clone or a container silently lost it. The marker keeps it off Linux, where
+    # the framework does not exist and the route is documented as unavailable.
+    "pyobjc-framework-Vision>=10.0; sys_platform == 'darwin'",
+]
+
+[project.urls]
+Homepage = "https://github.com/FZ2000/android-phone-control"
+Issues = "https://github.com/FZ2000/android-phone-control/issues"
+Changelog = "https://github.com/FZ2000/android-phone-control/releases"
+
+# Three names, on purpose, because they are read in three places. The project
+# and the distribution are `android-phone-control`, which is what people search
+# for and what the repository is called. The import is `phone_control`, which is
+# what a module path should look like. The command is `phone-control`, because it
+# is typed far more often than it is read.
+[project.scripts]
+phone-control = "phone_control.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/phone_control"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "ruff>=0.15",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "device: needs a real Android phone attached over USB (skipped without one)",
+    "jev: needs a configured Jev key (skipped without one)",
+]
+
+# Coverage measures the package, and the gate is 95%. Read it from the full
+# suite, device tests included: most of this package only runs while a phone is
+# attached, so the fast suite alone reports 81% and the missing fifth is not
+# untested so much as unreachable without hardware. `scripts/check.sh` runs the
+# whole thing; adding --cov to a device-less run would fail the gate on code it
+# cannot possibly have reached.
+[tool.coverage.run]
+source = ["src/phone_control"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = false
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
+
+# Linting, which this project went without for its first hundred commits. The rule
+# selection is deliberate rather than "everything", because a rule that fires on a
+# matter of taste trains people to ignore the output:
+#
+#   E, F, W  pycodestyle and pyflakes - errors, unused names, real mistakes
+#   I        import order, so a reader never wonders where an import belongs
+#   UP       pyupgrade - the modern spelling of what this already does
+#   B        bugbear - the shapes that are bugs in waiting, such as raise without from
+#   SIM, C4  the simpler way to write the same thing
+#   PIE, RET the leftovers a refactor leaves behind
+#   RUF      ruff's own, including a suppression that no longer suppresses anything
+#   PT       pytest style, since most of this repository is tests
+#
+# E501 is off on purpose: the formatter owns line length, and a rule that reports
+# what the formatter cannot fix (a long URL in a comment, a long string literal)
+# produces findings nobody can act on.
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "PIE", "RET", "RUF", "PT"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["phone_control", "scenarios"]
+# Without this, an aliased import - which is how a re-export is written - is not
+# allowed to share a statement with a plain one, so a module that re-exports a
+# handful of names ends up with one parenthesised import per name.
+combine-as-imports = true
+
+[tool.ruff.format]
+docstring-code-format = true

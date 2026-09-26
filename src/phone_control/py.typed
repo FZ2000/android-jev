@@ -1,0 +1,4 @@
+# This package's annotations are complete and are meant to be read by a type
+# checker in whatever imports it. Declared here because PEP 561 makes an empty
+# marker the whole signal, and a claim of typing that is not shipped is worse
+# than no claim at all.

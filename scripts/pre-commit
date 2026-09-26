@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# Refuse a commit whose suite is red.
+#
+# This exists because the discipline did not hold by hand. Three commits in a row
+# went in with a red suite, and the commit message on one of them said so: "I change
+# behaviour, run the suite, and commit without reading the result." A rule that is
+# only remembered is a rule that gets skipped under time pressure, so this is the
+# rule made mechanical.
+#
+# What it runs: the fast suite, and the guard that no test is allowed to fail. Both
+# are seconds. It does not run the device suite - that needs a phone, takes minutes,
+# and a commit should not depend on hardware being plugged in. `scripts/check.sh`
+# runs everything, and is what to run before pushing.
+#
+# Install it once:
+#
+#     scripts/install_git_hooks.sh
+#
+set -euo pipefail
+
+# The repository root, asked of git rather than derived from $0: a hook installed
+# as a symlink has a path inside .git/hooks, and walking up from it lands in .git.
+cd "$(git rev-parse --show-toplevel)"
+
+PYTHON=".venv/bin/python"
+PYTEST=".venv/bin/pytest"
+RUFF=".venv/bin/ruff"
+if [ ! -x "$PYTHON" ] || [ ! -x "$PYTEST" ] || [ ! -x "$RUFF" ]; then
+    echo "pre-commit: no virtualenv at $PYTHON, so the suite cannot run." >&2
+    echo "pre-commit: create one with 'uv sync --extra dev'." >&2
+    exit 1
+fi
+
+# The pytest program rather than `python -m pytest`, because only the latter puts
+# the working directory on sys.path. A test that imports something from the
+# repository root therefore passes under `python -m` and fails under the plain
+# pytest continuous integration runs, which is a red main and a green laptop. This
+# invokes it the way CI does so that a defect of that shape fails here first.
+# Linted first: seconds, and a failure here is easier to read than one after the
+# suite. Same command and same locked version as CI, for the reason the pytest note
+# above gives about sys.path - a local check that differs from the one that gates the
+# merge is how a red push happens.
+if ! "$RUFF" check . || ! "$RUFF" format --check .; then
+    cat >&2 <<'MESSAGE'
+
+pre-commit: ruff is not happy, so this commit is refused.
+
+Run `.venv/bin/ruff check .` to see the rules and `.venv/bin/ruff format .` to lay
+the code out. Both are enforced in CI.
+MESSAGE
+    exit 1
+fi
+
+if ! "$PYTEST" -q -m "not device" --no-header -p no:cacheprovider; then
+    cat >&2 <<'MESSAGE'
+
+pre-commit: the suite is red, so this commit is refused.
+
+Read the failure rather than reaching for --no-verify. The pattern this hook was
+written for is committing on a green-looking run without reading the result, and
+that is the one thing it cannot check for you.
+
+MESSAGE
+    exit 1
+fi

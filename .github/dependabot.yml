@@ -1,0 +1,34 @@
+# One updater, not two. Dependabot and a second bot would open duplicate pull
+# requests against the same manifests, and `uv.lock` is a manifest here.
+#
+# Security updates do not need this file — they are enabled on the repository
+# directly. This is for the slower, unglamorous half: a dependency that is fine
+# today and two years out of date when someone reads the code.
+#
+# Grouped, because fifteen pull requests for fifteen patch bumps is fifteen
+# reviews of the same one-line change, and the honest response to that is to stop
+# reading them. One request per ecosystem, which is then actually reviewed.
+#
+# Not verifiable from a developer machine: it runs on GitHub's schedule, so the
+# way to check it is the repository's Insights → Dependency graph → Dependabot
+# tab. If a pattern here were wrong it would fail quietly, which is why the
+# configuration is this short.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    groups:
+      python-packages:
+        patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ["*"]
