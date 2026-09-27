@@ -170,11 +170,18 @@ def check_the_settings(apply: bool) -> int:
         state = (live.get("secret_scanning") or {}).get("status", "not reported")
         report("secret scanning + push protection", state)
     else:
-        live = json.loads(body).get("security_and_analysis")
+        # Read as a state, not as JSON. The first version handed the dict straight to
+        # a format string, which printed a TypeError the first time these were
+        # actually enabled - the path had only ever run while they were unavailable.
+        live = json.loads(body).get("security_and_analysis") or {}
+        scanning = (live.get("secret_scanning") or {}).get("status")
+        pushing = (live.get("secret_scanning_push_protection") or {}).get("status")
         report(
             "secret scanning + push protection",
-            live or "not reported",
-            "(needs Advanced Security, or public)",
+            f"{scanning or 'off'}/{pushing or 'off'}",
+            ""
+            if scanning == "enabled"
+            else "(needs Advanced Security, or a public repository)",
         )
 
     code, body = github(f"repos/{REPOSITORY}/private-vulnerability-reporting")
