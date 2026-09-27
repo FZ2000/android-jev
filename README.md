@@ -1,4 +1,4 @@
-# android-phone-control
+# android-jev
 
 **Control your Android phone through Jev.**
 
@@ -9,6 +9,8 @@ inside, it reads the phone's own screen, asks
 does it, checks the result, and tells you honestly whether it worked.
 
 Everything runs over `adb`. Nothing is installed on the phone.
+
+<!-- mcp-name: io.github.FZ2000/android-jev -->
 
 ```
 run_task("open the Play Store")   →  achieved: true   done, 3 steps
@@ -49,14 +51,16 @@ adb devices          # the phone should say "device", not "unauthorized"
 ### 2. Install the server
 
 ```bash
-git clone https://github.com/FZ2000/android-phone-control ~/src/android-phone-control
-cd ~/src/android-phone-control
+git clone https://github.com/FZ2000/android-jev ~/src/android-jev
+cd ~/src/android-jev
 uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -e .
 ```
 
-The distribution is `android-phone-control`, the import is `phone_control` and the
-command is `phone-control`: three names, each read somewhere different.
+The distribution is `android-jev`, the import is `phone_control` and the command is
+`phone-control`: three names, each read somewhere different. The command also answers
+to `android-jev`, so that `uvx android-jev` — the spelling a registry client derives
+from the distribution name — starts the server.
 
 No `adb`? `PHONE_CONTROL_ADB` points at one, and the usual SDK locations are
 searched:
@@ -93,6 +97,22 @@ folder or a transcript.
 
 ### 4. Mount it in your agent
 
+**In Claude Code, this repository is also a plugin**, which mounts the server and
+installs the skill in one step — steps 4 and 5 both:
+
+```bash
+claude plugin marketplace add FZ2000/android-jev
+claude plugin install android-jev@android-jev
+```
+
+It asks for the Jev key once and keeps it in the system's credential store; leave it
+empty to use `JEV_API_KEY` or `OPENROUTER_API_KEY` from your environment instead. The
+server runs from the plugin's own copy of this repository through `uv`, so what it
+does always matches the skill that describes it. It still needs `uv` and `adb`, and
+the phone set up as in step 1.
+
+For any other client, or to run from your own clone:
+
 Any MCP client can mount this server; it speaks MCP over stdio. Send the agent this,
 with the path changed to wherever you cloned the repository — it says what the
 repository is and where its own documentation lives, because an agent that has to guess
@@ -100,12 +120,12 @@ either of those will guess wrong. A prompt rather than a snippet per client: eac
 keeps its MCP configuration somewhere different, and changes the format between
 versions.
 
-> The repository at `~/src/android-phone-control` is an MCP server that drives an
+> The repository at `~/src/android-jev` is an MCP server that drives an
 > Android phone attached by USB, together with the instructions for using it. Mount it
 > for me, and tell me when you have.
 >
 > - Start it as a local stdio server: the absolute path
->   `~/src/android-phone-control/.venv/bin/python`, the single argument `-m
+>   `~/src/android-jev/.venv/bin/python`, the single argument `-m
 >   phone_control`, run from that directory.
 > - Call it `android`.
 > - It needs the Jev key in its environment, under `JEV_API_KEY` — or `OPENROUTER_API_KEY`
@@ -152,7 +172,7 @@ repository, your agent has it already and there is nothing to install.**
 
 For any other harness, send it this:
 
-> Install the phone-control skill in `~/src/android-phone-control` for yourself, so
+> Install the phone-control skill in `~/src/android-jev` for yourself, so
 > that you can drive my phone in any session. The instructions are
 > `skills/android-phone-control/SKILL.md`, with one reference file beside it at
 > `references/tools-reference.md`. Put both wherever you read skills from, and tell me

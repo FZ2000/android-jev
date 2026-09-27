@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "android-phone-control"
+name = "android-jev"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

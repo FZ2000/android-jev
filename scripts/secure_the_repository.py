@@ -24,7 +24,7 @@ import os
 import subprocess
 import sys
 
-REPOSITORY = "FZ2000/android-phone-control"
+REPOSITORY = "FZ2000/android-jev"
 
 # The protections `main` should carry, and the reason each is there. Kept beside the
 # payload rather than in prose somewhere else, so the two cannot drift.

@@ -108,3 +108,24 @@ The device suite is not in CI and cannot be. It needs the phone, and the scenari
 written against one with Google's applications on it, so an emulator would fail them
 for the absence of Chrome rather than for a defect here. Run `scripts/check.sh` on the
 machine with the phone; that is where the 95% coverage gate is read.
+
+## Releasing
+
+A release is a tag. Pushing `vX.Y.Z` runs `.github/workflows/release.yml`, which
+builds the package, uploads it to PyPI, and then publishes `server.json` to the
+official MCP Registry — the entry that Glama, PulseMCP and the other directories mirror.
+
+1. Bump the version in `pyproject.toml`, `src/phone_control/__init__.py` and both
+   `version` fields of `server.json`. The suite fails until all four agree, and the
+   release job refuses a tag that disagrees with them.
+2. Commit that on `main` through the usual pull request, and let CI go green.
+3. Tag the merged commit and push the tag.
+
+Neither PyPI nor the registry keeps a credential here. PyPI trusts this repository's
+`release.yml` running in the `pypi` environment, and the registry trusts GitHub's OIDC
+token for any workflow in an `FZ2000` repository. The first time only, the trusted
+publisher has to be added on pypi.org and the `pypi` environment created in the
+repository settings; the workflow's header lists exactly what each needs.
+
+A PyPI release cannot be replaced. If the registry step fails after PyPI succeeded,
+fix the cause and re-run that job; do not re-tag.

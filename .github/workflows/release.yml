@@ -1,0 +1,167 @@
+name: Release
+
+# What this does: a pushed tag `vX.Y.Z` becomes a release on PyPI and an entry in the
+# official MCP Registry, in that order and only in that order.
+#
+#   git tag "v$(uv run python -c 'import phone_control;print(phone_control.__version__)')"
+#   git push origin --tags
+#
+# Why the order is fixed. The registry verifies a PyPI package by fetching it and
+# looking for `mcp-name: io.github.FZ2000/android-jev` in its description,
+# which is this README. An entry published before its package exists is refused, and a
+# package published without the marker cannot be fixed afterwards: a PyPI release is
+# immutable, so the only remedy is the next version number.
+#
+# What it refuses. A tag that disagrees with `pyproject.toml`, `__version__` or
+# `server.json` stops the run before anything is uploaded. The version test in the
+# suite keeps those three in step on every commit; this is the same check at the one
+# moment where getting it wrong cannot be undone.
+#
+# No stored credentials. PyPI is reached by trusted publishing and the registry by
+# GitHub OIDC: each job asks GitHub for a short-lived token that says which repository
+# and workflow it is, and neither service accepts anything else from here. There is no
+# secret in this repository's settings for a pull request to exfiltrate.
+#
+# What has to exist on the other side, once, before the first tag:
+#   - on pypi.org, a pending trusted publisher for the project `android-jev`,
+#     owner `FZ2000`, repository `android-jev`, workflow `release.yml`,
+#     environment `pypi`;
+#   - in this repository's settings, an environment named `pypi`, restricted to tags
+#     matching `v*`, so that nothing but a release tag can reach the upload step.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+# Two tags pushed together must not race each other to the registry.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build, and check the tag against the version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5.4.2
+
+      - name: The tag, the package and the registry entry name one version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          declared=$(python3 -c 'import tomllib;print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          entry=$(jq -r '.version' server.json)
+          pinned=$(jq -r '.packages[0].version' server.json)
+          echo "tag $tag, pyproject $declared, server.json $entry / $pinned"
+          if [ "$tag" != "$declared" ] || [ "$tag" != "$entry" ] || [ "$tag" != "$pinned" ]; then
+            echo "::error::The tag says $tag; pyproject.toml says $declared; server.json says $entry and $pinned. Bump them together, commit, and tag that commit."
+            exit 1
+          fi
+
+      - name: The suite that needs no phone
+        # The same command CI runs. A release is a commit that passed CI already, but
+        # a tag can be pushed on any commit, including one that never went through it.
+        run: |
+          uv sync --extra dev
+          scripts/check.sh --as-ci
+
+      - name: Build the sdist and the wheel
+        run: uv build
+
+      - name: The README the registry will read made it into the package
+        # PyPI shows the sdist's and wheel's metadata as the project description. This
+        # is the file the registry searches for the marker, so it is checked where it
+        # will actually be read rather than in the checkout.
+        run: |
+          name=$(jq -r '.name' server.json)
+          python3 - "$name" <<'PY'
+          import sys, zipfile, glob
+          name = sys.argv[1]
+          (wheel,) = glob.glob("dist/*.whl")
+          with zipfile.ZipFile(wheel) as archive:
+              (metadata,) = [n for n in archive.namelist() if n.endswith(".dist-info/METADATA")]
+              text = archive.read(metadata).decode()
+          assert f"mcp-name: {name}" in text, f"the wheel's description has no mcp-name: {name}"
+          print(f"the wheel's description carries mcp-name: {name}")
+          PY
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The environment is what a trusted publisher on PyPI is bound to, and what the
+    # repository settings restrict to release tags.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/android-jev/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33  # v1.14.2
+
+  registry:
+    name: Publish to the MCP Registry
+    needs: pypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      # Downloaded at a pinned version with a recorded checksum, for the reason
+      # `scripts/check_for_secrets.sh` gives about its scanner: a tool fetched as
+      # "latest" is a tool whose behaviour can change without a commit here.
+      MCP_PUBLISHER_VERSION: "1.8.1"
+      MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install mcp-publisher
+        run: |
+          archive=mcp-publisher_linux_amd64.tar.gz
+          curl -sSL -o "$archive" \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/${archive}"
+          echo "${MCP_PUBLISHER_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" mcp-publisher
+
+      - name: Wait until PyPI serves the release
+        # The registry checks the package the moment it is asked to, and PyPI's JSON
+        # API can lag an upload by a minute. Waiting here is cheaper than a failed
+        # publish that has to be re-run by hand.
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          for attempt in $(seq 1 30); do
+            if curl -sf "https://pypi.org/pypi/android-jev/${version}/json" >/dev/null; then
+              echo "PyPI serves ${version}"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::PyPI did not serve android-jev ${version} within five minutes"
+          exit 1
+
+      - name: Authenticate to the registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server.json
+        run: ./mcp-publisher publish

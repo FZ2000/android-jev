@@ -51,7 +51,7 @@ repository is the thing that has to change.
 ## The rule to set the moment it is public
 
 ```bash
-gh api -X PUT repos/FZ2000/android-phone-control/branches/main/protection \
+gh api -X PUT repos/FZ2000/android-jev/branches/main/protection \
   -H "Accept: application/vnd.github+json" --input - <<'JSON'
 {
   "required_status_checks": { "strict": true, "contexts": ["ci-gate"] },
@@ -100,13 +100,13 @@ Then, separately, because they are different features:
 # Secret scanning and push protection: the only control that acts before a secret
 # leaves the machine. A scan afterwards means the credential is already public and
 # rotation is the only remedy.
-gh api -X PATCH repos/FZ2000/android-phone-control --input - <<'JSON'
+gh api -X PATCH repos/FZ2000/android-jev --input - <<'JSON'
 {"security_and_analysis":{"secret_scanning":{"status":"enabled"},
  "secret_scanning_push_protection":{"status":"enabled"}}}
 JSON
 
 # Private vulnerability reporting, so SECURITY.md has somewhere to point.
-gh api -X PUT repos/FZ2000/android-phone-control/private-vulnerability-reporting
+gh api -X PUT repos/FZ2000/android-jev/private-vulnerability-reporting
 ```
 
 ## Why a contribution is safe here already

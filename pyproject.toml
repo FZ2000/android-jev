@@ -1,5 +1,5 @@
 [project]
-name = "android-phone-control"
+name = "android-jev"
 version = "0.1.0"
 description = "Control your Android phone through Jev: an MCP server that reads the screen, decides each step, and reports honestly"
 readme = "README.md"
@@ -48,17 +48,22 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/FZ2000/android-phone-control"
-Issues = "https://github.com/FZ2000/android-phone-control/issues"
-Changelog = "https://github.com/FZ2000/android-phone-control/releases"
+Homepage = "https://github.com/FZ2000/android-jev"
+Issues = "https://github.com/FZ2000/android-jev/issues"
+Changelog = "https://github.com/FZ2000/android-jev/releases"
 
 # Three names, on purpose, because they are read in three places. The project
-# and the distribution are `android-phone-control`, which is what people search
-# for and what the repository is called. The import is `phone_control`, which is
+# and the distribution are `android-jev`, which is what the repository is called
+# and what an installer asks for. The import is `phone_control`, which is
 # what a module path should look like. The command is `phone-control`, because it
 # is typed far more often than it is read.
 [project.scripts]
 phone-control = "phone_control.server:main"
+# The same entry point under the distribution's own name, because `uvx <distribution>`
+# runs the command of that name, and the MCP Registry tells clients to start the
+# server that way. Without it `uvx android-jev` installs the package and
+# then reports that it provides no such command.
+android-jev = "phone_control.server:main"
 
 [build-system]
 requires = ["hatchling"]

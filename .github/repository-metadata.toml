@@ -19,7 +19,7 @@
 # Which repository this describes. Declared rather than read from the git remote,
 # because the development checkout has a different remote and a different directory
 # name, and a check that fails because of where somebody cloned it is a bad check.
-repository = "FZ2000/android-phone-control"
+repository = "FZ2000/android-jev"
 
 description = "MCP server and skill that let an agent drive an Android phone naturally over adb"
 
