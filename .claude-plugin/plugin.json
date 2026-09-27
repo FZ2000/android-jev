@@ -1,0 +1,35 @@
+{
+  "name": "android-phone-control",
+  "displayName": "Android Phone Control",
+  "description": "Drive an Android phone attached by USB: the run_task MCP server plus the skill that teaches Claude to use it.",
+  "author": {
+    "name": "FZ2000",
+    "url": "https://github.com/FZ2000"
+  },
+  "homepage": "https://github.com/FZ2000/android-phone-control#readme",
+  "repository": "https://github.com/FZ2000/android-phone-control",
+  "license": "MIT",
+  "keywords": ["android", "adb", "phone", "mcp", "automation", "jev"],
+  "userConfig": {
+    "jev_api_key": {
+      "type": "string",
+      "title": "Jev API key (optional)",
+      "description": "An OpenRouter sk-or-… key or a TypeSafe apikey_… one. Leave empty to use JEV_API_KEY or OPENROUTER_API_KEY from your environment, or to run on the keyword fallback.",
+      "sensitive": true,
+      "default": ""
+    }
+  },
+  "mcpServers": {
+    "android": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "if [ -n \"$PLUGIN_JEV_API_KEY\" ]; then export JEV_API_KEY=\"$PLUGIN_JEV_API_KEY\"; fi; unset PLUGIN_JEV_API_KEY; exec uv run --quiet --frozen --directory \"$CLAUDE_PLUGIN_ROOT\" phone-control"
+      ],
+      "env": {
+        "PLUGIN_JEV_API_KEY": "${user_config.jev_api_key}",
+        "UV_PROJECT_ENVIRONMENT": "${CLAUDE_PLUGIN_DATA}/venv"
+      }
+    }
+  }
+}

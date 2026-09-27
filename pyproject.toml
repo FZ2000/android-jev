@@ -59,6 +59,11 @@ Changelog = "https://github.com/FZ2000/android-phone-control/releases"
 # is typed far more often than it is read.
 [project.scripts]
 phone-control = "phone_control.server:main"
+# The same entry point under the distribution's own name, because `uvx <distribution>`
+# runs the command of that name, and the MCP Registry tells clients to start the
+# server that way. Without it `uvx android-phone-control` installs the package and
+# then reports that it provides no such command.
+android-phone-control = "phone_control.server:main"
 
 [build-system]
 requires = ["hatchling"]

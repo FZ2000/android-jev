@@ -10,6 +10,8 @@ does it, checks the result, and tells you honestly whether it worked.
 
 Everything runs over `adb`. Nothing is installed on the phone.
 
+<!-- mcp-name: io.github.FZ2000/android-phone-control -->
+
 ```
 run_task("open the Play Store")   →  achieved: true   done, 3 steps
 run_task("search for YouTube")    →  achieved: true   done, 5 steps
@@ -56,7 +58,9 @@ uv pip install --python .venv/bin/python -e .
 ```
 
 The distribution is `android-phone-control`, the import is `phone_control` and the
-command is `phone-control`: three names, each read somewhere different.
+command is `phone-control`: three names, each read somewhere different. The command
+also answers to `android-phone-control`, so that `uvx android-phone-control` — the
+spelling a registry client derives from the distribution name — starts the server.
 
 No `adb`? `PHONE_CONTROL_ADB` points at one, and the usual SDK locations are
 searched:
@@ -92,6 +96,22 @@ Whichever way it reaches the server, the key never appears in a state, a log, a 
 folder or a transcript.
 
 ### 4. Mount it in your agent
+
+**In Claude Code, this repository is also a plugin**, which mounts the server and
+installs the skill in one step — steps 4 and 5 both:
+
+```bash
+claude plugin marketplace add FZ2000/android-phone-control
+claude plugin install android-phone-control@android-phone-control
+```
+
+It asks for the Jev key once and keeps it in the system's credential store; leave it
+empty to use `JEV_API_KEY` or `OPENROUTER_API_KEY` from your environment instead. The
+server runs from the plugin's own copy of this repository through `uv`, so what it
+does always matches the skill that describes it. It still needs `uv` and `adb`, and
+the phone set up as in step 1.
+
+For any other client, or to run from your own clone:
 
 Any MCP client can mount this server; it speaks MCP over stdio. Send the agent this,
 with the path changed to wherever you cloned the repository — it says what the

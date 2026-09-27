@@ -255,8 +255,8 @@ has.
 | | files | lines |
 | --- | --- | --- |
 | library (`src/phone_control`) | 19 | 7,656 |
-| tests (`tests/`) | 50 | 14,492 |
-| documentation, written by hand | 12 | 3,465 |
+| tests (`tests/`) | 52 | 14,684 |
+| documentation, written by hand | 12 | 3,506 |
 | the skill copied to each agent's own path, generated and checked in | 5 | 641 |
 
 The documentation row is the README, `docs/`, `CONTRIBUTING.md`, `SECURITY.md` and

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.FZ2000/android-phone-control",
+  "title": "Android Phone Control",
+  "description": "Drive an Android phone over adb: say what you want done, and it reports honestly whether it was.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/FZ2000/android-phone-control",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/FZ2000/android-phone-control#readme",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "android-phone-control",
+      "version": "0.1.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "JEV_API_KEY",
+          "description": "The Jev decision-model key: an OpenRouter sk-or-… key or a TypeSafe apikey_… one. Optional; without it run_task falls back to keyword matching.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "DSH_PHONE_SERIAL",
+          "description": "Which device to drive when more than one is attached (the serial `adb devices` prints).",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "PHONE_CONTROL_ADB",
+          "description": "Path to adb when it is not on PATH and not in a usual Android SDK location.",
+          "isRequired": false,
+          "format": "filepath"
+        }
+      ]
+    }
+  ]
+}
