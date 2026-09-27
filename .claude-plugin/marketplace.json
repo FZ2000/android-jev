@@ -1,5 +1,5 @@
 {
-  "name": "android-phone-control",
+  "name": "android-jev",
   "description": "Drive an Android phone from Claude Code over adb.",
   "owner": {
     "name": "FZ2000",
@@ -7,7 +7,7 @@
   },
   "plugins": [
     {
-      "name": "android-phone-control",
+      "name": "android-jev",
       "source": "./",
       "description": "The run_task MCP server and the skill for using it: say what you want done on the phone, and it reports honestly whether it was.",
       "category": "automation"

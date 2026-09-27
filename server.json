@@ -1,19 +1,19 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.FZ2000/android-phone-control",
-  "title": "Android Phone Control",
+  "name": "io.github.FZ2000/android-jev",
+  "title": "Android Jev",
   "description": "Drive an Android phone over adb: say what you want done, and it reports honestly whether it was.",
   "version": "0.1.0",
   "repository": {
-    "url": "https://github.com/FZ2000/android-phone-control",
+    "url": "https://github.com/FZ2000/android-jev",
     "source": "github"
   },
-  "websiteUrl": "https://github.com/FZ2000/android-phone-control#readme",
+  "websiteUrl": "https://github.com/FZ2000/android-jev#readme",
   "packages": [
     {
       "registryType": "pypi",
       "registryBaseUrl": "https://pypi.org",
-      "identifier": "android-phone-control",
+      "identifier": "android-jev",
       "version": "0.1.0",
       "runtimeHint": "uvx",
       "transport": {

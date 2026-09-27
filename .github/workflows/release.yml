@@ -7,7 +7,7 @@ name: Release
 #   git push origin --tags
 #
 # Why the order is fixed. The registry verifies a PyPI package by fetching it and
-# looking for `mcp-name: io.github.FZ2000/android-phone-control` in its description,
+# looking for `mcp-name: io.github.FZ2000/android-jev` in its description,
 # which is this README. An entry published before its package exists is refused, and a
 # package published without the marker cannot be fixed afterwards: a PyPI release is
 # immutable, so the only remedy is the next version number.
@@ -23,8 +23,8 @@ name: Release
 # secret in this repository's settings for a pull request to exfiltrate.
 #
 # What has to exist on the other side, once, before the first tag:
-#   - on pypi.org, a pending trusted publisher for the project `android-phone-control`,
-#     owner `FZ2000`, repository `android-phone-control`, workflow `release.yml`,
+#   - on pypi.org, a pending trusted publisher for the project `android-jev`,
+#     owner `FZ2000`, repository `android-jev`, workflow `release.yml`,
 #     environment `pypi`;
 #   - in this repository's settings, an environment named `pypi`, restricted to tags
 #     matching `v*`, so that nothing but a release tag can reach the upload step.
@@ -107,7 +107,7 @@ jobs:
     # repository settings restrict to release tags.
     environment:
       name: pypi
-      url: https://pypi.org/project/android-phone-control/
+      url: https://pypi.org/project/android-jev/
     permissions:
       id-token: write
     steps:
@@ -152,12 +152,12 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           for attempt in $(seq 1 30); do
-            if curl -sf "https://pypi.org/pypi/android-phone-control/${version}/json" >/dev/null; then
+            if curl -sf "https://pypi.org/pypi/android-jev/${version}/json" >/dev/null; then
               echo "PyPI serves ${version}"; exit 0
             fi
             sleep 10
           done
-          echo "::error::PyPI did not serve android-phone-control ${version} within five minutes"
+          echo "::error::PyPI did not serve android-jev ${version} within five minutes"
           exit 1
 
       - name: Authenticate to the registry

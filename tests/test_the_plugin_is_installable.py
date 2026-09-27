@@ -1,6 +1,6 @@
 """The repository is a Claude Code plugin marketplace, and the plugin in it works.
 
-`claude plugin marketplace add FZ2000/android-phone-control` reads
+`claude plugin marketplace add FZ2000/android-jev` reads
 `.claude-plugin/marketplace.json`, which lists one plugin whose root is this
 repository's root: the canonical skill under `skills/` and the server in `src/` are
 what it installs, not copies of them. These tests hold the manifests to that.

@@ -1,13 +1,13 @@
 {
-  "name": "android-phone-control",
-  "displayName": "Android Phone Control",
+  "name": "android-jev",
+  "displayName": "Android Jev",
   "description": "Drive an Android phone attached by USB: the run_task MCP server plus the skill that teaches Claude to use it.",
   "author": {
     "name": "FZ2000",
     "url": "https://github.com/FZ2000"
   },
-  "homepage": "https://github.com/FZ2000/android-phone-control#readme",
-  "repository": "https://github.com/FZ2000/android-phone-control",
+  "homepage": "https://github.com/FZ2000/android-jev#readme",
+  "repository": "https://github.com/FZ2000/android-jev",
   "license": "MIT",
   "keywords": ["android", "adb", "phone", "mcp", "automation", "jev"],
   "userConfig": {

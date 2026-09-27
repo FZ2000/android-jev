@@ -57,7 +57,7 @@ def test_the_entry_names_the_distribution_this_repository_builds():
 
 
 def test_the_command_a_registry_client_runs_is_one_the_package_installs():
-    """`uvx android-phone-control` runs the script called `android-phone-control`."""
+    """`uvx android-jev` runs the script called `android-jev`."""
     package = the_package()
     assert package["runtimeHint"] == "uvx"
     scripts = the_manifest()["project"]["scripts"]
